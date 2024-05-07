@@ -32,6 +32,7 @@ public class RunServer {
             System.out.println("[1] Agregar dato");
             System.out.println("[2] Mostrar datos");
             System.out.println("[3] Salir");
+            System.out.println("[4] Obtener valor del Dolar");
             System.out.print("Ingrese su opción: ");
             opcion = Integer.parseInt(br.readLine());
 
@@ -44,6 +45,9 @@ public class RunServer {
                     break;
                 case 3:
                     System.out.println("Saliendo del programa...");
+                    break;
+                case 4:
+                    System.out.println(server.getPrecioDolar());
                     break;
                 default:
                     System.out.println("Opción inválida. Intente de nuevo.");
