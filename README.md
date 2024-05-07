@@ -2,7 +2,7 @@
 ## Integrantes
 * Thomas Alonso Molina Sagredo
 * Jorge Alexis Palacios Gonzalez
-* Fernando Agustin Arancibia Diaz
+* Fernando Agustin Guerrero Diaz
 * Matias [_] Bugeño [_]
 
 ## Entrega 1 
