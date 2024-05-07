@@ -7,11 +7,12 @@ public class User implements Serializable {
 	private String name;
 	private String email;
 	private String password;
-	private int total_amount;
+	private String currency;
+	private double total_amount;
 	
 	private static final long serialVersionUID = 1L;
 	
-	public User(String rut, String name, String email, String password, int total_amount) {
+	public User(String rut, String name, String email, String password, double total_amount) {
 		this.rut = rut;
 		this.name = name;
 		this.email = email;
@@ -19,12 +20,20 @@ public class User implements Serializable {
 		this.total_amount = total_amount;
 	}
 	
+	public String getCurrency() {
+		return currency;
+	}
+
 	public String getRut() {
 		return rut;
 	}
 
 	public String getName() {
 		return name;
+	}
+
+	public void setCurrency(String currency) {
+		this.currency = currency;
 	}
 
 	public void setName(String name) {
@@ -47,7 +56,7 @@ public class User implements Serializable {
 		this.password = password;
 	}
 
-	public int getTotal_amount() {
+	public double getTotal_amount() {
 		return total_amount;
 	}
 }
