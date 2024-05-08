@@ -219,8 +219,6 @@ public class ServerImpl implements InterfaceServer{
 			e.printStackTrace();
 		}
 	
-		
-		
 		return valor;
 	}
 	
