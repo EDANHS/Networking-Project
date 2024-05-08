@@ -5,10 +5,13 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.sql.ResultSet;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,12 +44,13 @@ public class ServerImpl implements InterfaceServer{
 		init_data();
 	}
 
-	public void init_data() throws SQLException, InterruptedException {
+	private void init_data() throws SQLException, InterruptedException {
 		Connection connection = null;
 		Statement query = null;
 		ResultSet results = null;
-		String rut, name, email, password;
-		int total_amount;
+		String name, email, password, currency, birthdate;
+		double total_amount;
+		int idUser;
 
 		while(true) {
 			connection = connect_data_base(this.url, this.username, this.password);
@@ -59,13 +63,15 @@ public class ServerImpl implements InterfaceServer{
 		results = query.executeQuery("SELECT * FROM user");
 
 		while (results.next()) {
-			rut = results.getString("rut");
-			name = results.getString("name");
-			email = results.getString("email");
-			password = results.getString("password");
-			total_amount = results.getInt("total_amount");
+			idUser = results.getInt("IDUser");
+			name = results.getString("Name") + " " + results.getString("Last Name");
+			birthdate = results.getString("Birthdate");
+			total_amount = results.getInt("Total Money");
+			email = results.getString("Email");
+			password = results.getString("Password");
+			currency = results.getString("Currency");
 
-			database.add(new User(rut, name, email, password, total_amount));
+			database.add(new User(idUser, name, email, password, birthdate, currency, total_amount));
 		}
 
 		connection.close(); 
@@ -110,48 +116,42 @@ public class ServerImpl implements InterfaceServer{
 	}
 
 	@Override
-	public Boolean add_user(String name, String rut, String email, String password) throws RemoteException {
-		User new_user = new User(rut, name, email, password, 0);
+	public Boolean add_user(int idUser, String name, String birthdate, String email, String password) throws RemoteException {
+		User new_user = new User(idUser, name, email, password, birthdate, "USD", 0);
 
 		return database.add(new_user);
 	}
 
 	@Override
-	public Boolean add_data() throws RemoteException, SQLException {
+	public Boolean update_data_base() throws RemoteException, SQLException, ParseException {
 		Connection connection = connect_data_base(this.url, this.username, this.password);
 		PreparedStatement query;
-		ResultSet result;
 		String sql;
+		String[] user_name;
+		User temp;
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		
+		sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) " +
+				"VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+				"ON DUPLICATE KEY UPDATE " +
+				"`Name` = VALUES(`Name`), `Last Name` = VALUES(`Last Name`), `Total Money` = VALUES(`Total Money`), " + 
+				"`Email` = VALUES(`Email`), `Password` = VALUES(`Password`), `Currency` = VALUES(`Currency`);";
+
 		for(int i = 0; i < database.size(); i++) {
-			User temp = database.get(i);
-			
-			sql = "SELECT * FROM user WHERE rut = ?";
+			temp = database.get(i);
+			user_name = temp.getName().split(" ");
 			query = connection.prepareStatement(sql);
-			query.setString(1, temp.getRut());
-			result = query.executeQuery();
+			java.util.Date parsedDate = dateFormat.parse(temp.getBirthdate());
 
-			if(result.next()) {
-				String updateSql = "UPDATE user SET name = ?, email = ?, password = ?, total_amount = ? WHERE rut = ?";
-
-				query = connection.prepareStatement(updateSql);
-				query.setString(1, temp.getName());
-				query.setString(2, temp.getEmail());
-				query.setString(3, temp.getPassword());
-				query.setDouble(4, temp.getTotal_amount());
-				query.setString(5, temp.getRut());
-			} 
-			else {
-				String insertSQL = "INSERT INTO user (rut, name, email, password, total_amount) VALUES (?, ?, ?, ?, ?)";
-
-				query = connection.prepareStatement(insertSQL);
-				query.setString(1, temp.getRut());
-				query.setString(2, temp.getName());
-				query.setString(3, temp.getEmail());
-				query.setString(4, temp.getPassword());
-				query.setDouble(5, temp.getTotal_amount());
-			}
-
+			query.setInt(1, temp.getIdUser());
+			query.setString(2, user_name[0]);
+			query.setString(3, user_name[1]);
+			query.setDate(4, new Date(parsedDate.getTime()));
+			query.setDouble(5, temp.getTotal_amount());
+			query.setString(6, temp.getEmail());
+			query.setString(7, temp.getPassword());
+			query.setString(8, temp.getCurrency());
+			
 			query.executeUpdate();
 		}
 

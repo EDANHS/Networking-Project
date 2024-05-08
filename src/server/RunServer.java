@@ -9,13 +9,14 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
+import java.text.ParseException;
 
 import common.InterfaceServer;
 import common.User;
 
 public class RunServer {
-	public static void main(String args[]) throws NotBoundException, NumberFormatException, IOException, SQLException, InterruptedException, ClassNotFoundException {
-		InterfaceServer server = new ServerImpl("jdbc:mysql://localhost:3306/networking_proyect", "root", "1234");
+	public static void main(String args[]) throws NotBoundException, NumberFormatException, IOException, SQLException, InterruptedException, ClassNotFoundException, ParseException {
+		InterfaceServer server = new ServerImpl("jdbc:mysql://localhost:3306/money transaction system", "root", "");
 		//Lista de objetos que el cliente puede acceder
 		Registry registry = LocateRegistry.createRegistry(1099);
 		registry.rebind("severDePersonas", server);
@@ -64,21 +65,21 @@ public class RunServer {
     }
 	
 	public static void agregarDato(BufferedReader br, InterfaceServer server) throws IOException {
-		String rut;
-		String name;
-		String email;
-		String password;
+		String name, birthdate, email, password;
+		int idUser;
 
 		System.out.println("Ingrese su nombre: ");
 		name = br.readLine();
 		System.out.println("Ingrese su rut:");
-		rut = br.readLine();
+		idUser = Integer.parseInt(br.readLine());
+		System.out.println("Ingrese su fecha de cumpleaños (aaaa-mm-dd)");
+		birthdate = br.readLine();
 		System.out.println("Ingrese su email: ");
 		email = br.readLine();
 		System.out.println("Ingrese su contraseña: ");
 		password = br.readLine();
         
-        server.add_user(name, rut, email, password);
+        server.add_user(idUser, name, birthdate, email, password);
 	}
 	
 	public static void mostrarDatos(InterfaceServer server) throws RemoteException {
@@ -87,17 +88,17 @@ public class RunServer {
 		for (User p : users) {
 			
 			System.out.println("Nombre: " + p.getName());
-			System.out.println("Rut: " + p.getRut());
+			System.out.println("Rut: " + p.getIdUser());
 			System.out.println("Total: " + p.getTotal_amount());
 		}
 		System.out.println("*************************************");
 	}
 	
-	private static void cerrarServer(InterfaceServer server) throws RemoteException, NotBoundException, SQLException {
+	private static void cerrarServer(InterfaceServer server) throws RemoteException, NotBoundException, SQLException, ParseException {
 		Registry registry = LocateRegistry.getRegistry(1099);
 		registry.unbind("severDePersonas");
 		UnicastRemoteObject.unexportObject(server, true);
 		System.out.println("Cerrando servidor...");
-		server.add_data();
+		server.update_data_base();
 	}
 }
