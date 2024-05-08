@@ -11,5 +11,5 @@ public interface InterfaceServer extends Remote {
 	public ArrayList<User> getUsers() throws RemoteException;
 	public Boolean add_user(String name, String rut, String email, String password) throws RemoteException;
 	public String getDataFromApi() throws RemoteException;
-	public double getPrecioDolar() throws RemoteException;
+	public double getValorMonedaEnPeso(String moneda) throws RemoteException;
 }

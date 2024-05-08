@@ -31,8 +31,9 @@ public class RunServer {
             System.out.println("***********Menú Server: ********");
             System.out.println("[1] Agregar dato");
             System.out.println("[2] Mostrar datos");
-            System.out.println("[3] Salir");
-            System.out.println("[4] Obtener valor del Dolar");
+            System.out.println("[3] Mostrar valor del Dolar");
+            System.out.println("[4] Mostrar valor del Euro");
+            System.out.println("[5] Salir");
             System.out.print("Ingrese su opción: ");
             opcion = Integer.parseInt(br.readLine());
 
@@ -43,16 +44,20 @@ public class RunServer {
                 case 2:
                     mostrarDatos(server);
                     break;
+
                 case 3:
-                    System.out.println("Saliendo del programa...");
+                    System.out.println("Valor del Dólar: "+ server.getValorMonedaEnPeso("dolar"));
                     break;
                 case 4:
-                    System.out.println(server.getPrecioDolar());
+                    System.out.println("Valor del Euro: " + server.getValorMonedaEnPeso("euro"));
+                    break;
+                case 5:
+                    System.out.println("Saliendo del programa...");
                     break;
                 default:
                     System.out.println("Opción inválida. Intente de nuevo.");
             }
-        } while (opcion != 3);
+        } while (opcion != 5);
 
        br.close();
     }

@@ -106,7 +106,7 @@ public class ServerImpl implements InterfaceServer{
 	}
 	
 	@Override
-	public double getPrecioDolar() {
+	public double getValorMonedaEnPeso(String moneda) {
 		String output = getDataFromApi();
 		ObjectMapper objectMapper = new ObjectMapper();
 		double valor =0.0;
@@ -114,7 +114,7 @@ public class ServerImpl implements InterfaceServer{
 		try {
 			JsonNode jsonNode = objectMapper.readTree(output);
 
-			valor = jsonNode.get("dolar").get("valor").asDouble();
+			valor = jsonNode.get(moneda).get("valor").asDouble();
 			
 			
 			
@@ -123,8 +123,17 @@ public class ServerImpl implements InterfaceServer{
 		}catch (JsonProcessingException e) {
 			e.printStackTrace();
 		}
+	
+		
 		
 		return valor;
+	}
+	
+	public double convertirPesoAMoneda(double peso, String moneda) {
+		double valorMoneda= getValorMonedaEnPeso(moneda);
+		double result = peso/valorMoneda;
+		return result;
+		
 	}
 	
 }
