@@ -1,49 +1,63 @@
 package client;
-import java.util.List;
-import java.util.Scanner;
 
-import common.User;
-
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
+import java.sql.SQLException;
 
 public class RunClient {
-	public static void main(String args[]) throws RemoteException, NotBoundException {
+	public static void main(String args[]) throws NotBoundException, NumberFormatException, SQLException, IOException {
 		Client client = new Client();
 		client.startClient();
 		menu(client);
 	}
 	
-	public static void menu(Client client) throws RemoteException{
-        Scanner scanner = new Scanner(System.in);
+	public static void menu(Client client) throws NumberFormatException, SQLException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         int opcion;
-
+        	
+        if(client.log_in(br) == null) {
+        	System.out.println("El usuario no existe");
+        	System.out.println("Desea crear una nueva cuenta?");
+        	System.out.println("[1] Si [2] No");
+        	opcion = Integer.parseInt(br.readLine());
+        	
+        	if(opcion == 1) client.register(br);
+        	else return;
+        }
+        
         do {
-            System.out.println("\n******* Menú Cliente *******");
-            System.out.println("1. Buscar persona por nombre");
-            System.out.println("2. Agregar persona");
-            System.out.println("3. Mostrar todas las personas");
-            System.out.println("4. Salir");
+            System.out.println("*********** Menú Cliente: ********");
+            System.out.println("[1] Mostrar Transacciones");
+            System.out.println("[2] Realizar Transacción");
+            System.out.println("[3] Mostrar Perfilr");
+            System.out.println("[4] Mostrar valor del Euro");
+            System.out.println("[5] Salir");
             System.out.print("Ingrese su opción: ");
-            opcion = scanner.nextInt();
-            scanner.nextLine(); // Consumir el salto de línea después de nextInt()
+            opcion = Integer.parseInt(br.readLine());
 
             switch (opcion) {
                 case 1:
-                    
+                	client.show_transaction();
                     break;
                 case 2:
-                    
+                	client.performBankTransaction(br);
                     break;
+
                 case 3:
+                	client.checkAccountStatus();
                     break;
                 case 4:
                     break;
+                case 5:
+                    System.out.println("Saliendo del programa...");
+                    break;
                 default:
-                    System.out.println("Opción inválida. Por favor, ingrese un número válido.");
+                    System.out.println("Opción inválida. Intente de nuevo.");
             }
-        } while (opcion != 4);
+        } while (opcion != 5);
 
-        scanner.close();
-    }
+       br.close();
+    }	
 }

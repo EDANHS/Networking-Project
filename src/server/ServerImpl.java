@@ -97,28 +97,156 @@ public class ServerImpl implements InterfaceServer{
 	}
 
 	@Override
-	public Boolean log_in(String email, String password) throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Boolean make_transaction(String origin_id, String dest_id, int total, String currency_type)
-			throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void show_transactions(String id) throws RemoteException {
-		// TODO Auto-generated method stub
+	public User log_in(String email, String password) throws RemoteException, SQLException {
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		ResultSet result;
 		
+		String sql = "SELECT * FROM user";
+		
+		query = connection.prepareStatement(sql);
+		
+		result = query.executeQuery();
+		
+		while(result.next()) {
+			String aux_email = result.getString("Email");
+			String aux_password = result.getString("Password");
+			
+			if (email.equals(aux_email)) {
+				if (password.equals(aux_password)) {
+					
+					User new_user = new User(result.getInt("IDUser"),
+											result.getString("Name") + " " + result.getString("Last Name"),
+											result.getString("Email"),
+											result.getString("Password"),
+											result.getString("Birthdate"),
+											result.getString("Currency"),
+											result.getDouble("Total Money"));
+					connection.close();
+					return new_user;
+				}
+			}
+		}
+		connection.close();
+		return null;
 	}
 
 	@Override
-	public Boolean add_user(int idUser, String name, String birthdate, String email, String password) throws RemoteException {
-		User new_user = new User(idUser, name, email, password, birthdate, "USD", 0);
+	public Boolean make_transaction(int origin_id, int dest_id, double total, String currency_type) throws RemoteException, SQLException {
+				boolean flag = false;
+		
+				Connection connection = connect_data_base(this.url, this.username, this.password);
+				PreparedStatement query;
+				ResultSet result;
+				
+				String sql = "SELECT * FROM user WHERE IDUser = ?";
+				
+				query = connection.prepareStatement(sql);
+				query.setInt(1, origin_id);
+				result = query.executeQuery();
+				
+				// Guardar el usuario auxiliar
+				User aux_user = new User(result.getInt("IDUser"),
+										result.getString("Name"),
+										result.getString("Birthdate"),
+										result.getString("Email"),
+										result.getString("Password"),
+										result.getString("Currency"),
+										result.getDouble("Total Money"));
+				
+				// Obtengo el usuario de origin para ver si existe
+				if (origin_id == result.getInt("IDUser")) {
+					sql = "SELECT * FROM user WHERE IDUser = ?";
+					query = connection.prepareStatement(sql);
+					query.setInt(1, dest_id);
+					result = query.executeQuery();
+					
+					// Obtengo el usuario destino para ver si existe
+					if (dest_id == result.getInt("IDUser")) {
+						if (aux_user.getTotal_amount() >= result.getDouble("Total Money")) {
+							
+							// Hacer la transacción hacia el destinatario
+							double transaction = this.convertirPesoAMoneda(aux_user.getTotal_amount(), result.getString("Currency"));
+							sql = "UPDATE user SET Total Money = ? WHERE IDUser = ?";
+							query = connection.prepareStatement(sql);
+							query.setDouble(1, result.getDouble("Total Money") + transaction);
+							query.setInt(2, result.getInt("IDUser"));
+							query.executeUpdate();
+							
+							// Hacer la transacción hacia el origen
+							sql = "UPDATE user SET Total Money = ? WHERE IDUser = ?";
+							query = connection.prepareStatement(sql);
+							query.setDouble(1, result.getDouble("Total Money") - total);
+							query.setInt(2, aux_user.getIdUser());
+							query.executeUpdate();
+							flag = true;
+						}
+					}
+				}
+				
+				connection.close();
+				
+				if(flag) return true;
+				return false;
+	}
 
+	@Override
+	public void show_transactions(int id) throws RemoteException, SQLException {
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		ResultSet results;
+		
+		String sql = "SELECT * FROM transaction WHERE IDSourceUser = ?";
+		
+		query = connection.prepareStatement(sql);
+		
+		results = query.executeQuery();
+		results.first();		
+		while(true) {
+			
+			int idTrans = results.getInt("IDTransaction");
+			int idSource = results.getInt("IDSourceUser");
+			int idDestination = results.getInt("IDDestinationUser");
+			double total = results.getDouble("TotalAmount");
+			String currency = results.getString("Currency");
+			
+			System.out.println("*****************************");
+			System.out.println("Transaction ID: " + idTrans);
+			System.out.println("Source ID: " + idSource);
+			System.out.println("Destination ID: " + idDestination);
+			System.out.println("Amount: " + total);
+			System.out.println("Currency: " + currency);
+			System.out.println("*****************************\n");
+			
+			if(results.next() == false) break;
+		}
+		
+		connection.close();
+	}
+
+	@Override
+	public Boolean add_user(int idUser, String name, String birthdate, String email, String password) throws RemoteException, SQLException {
+		User new_user = new User(idUser, name,  email, password, birthdate, "USD", 0);
+		
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		
+		String sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		String[] user_name = new_user.getName().split(" ");
+		query = connection.prepareStatement(sql);
+		query.setInt(1, new_user.getIdUser());
+		query.setString(2, user_name[0]);
+		query.setString(3, user_name[1]);
+		query.setString(4, new_user.getBirthdate());
+		query.setDouble(5, new_user.getTotal_amount());
+		query.setString(6, new_user.getEmail());
+		query.setString(7, new_user.getPassword());
+		query.setString(8, new_user.getCurrency());
+		
+		query.executeUpdate();
+		
+		connection.close();
+		
 		return database.add(new_user);
 	}
 

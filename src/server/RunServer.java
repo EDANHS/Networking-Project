@@ -16,7 +16,7 @@ import common.User;
 
 public class RunServer {
 	public static void main(String args[]) throws NotBoundException, NumberFormatException, IOException, SQLException, InterruptedException, ClassNotFoundException, ParseException {
-		InterfaceServer server = new ServerImpl("jdbc:mysql://localhost:3306/money transaction system", "root", "");
+		InterfaceServer server = new ServerImpl("jdbc:mysql://localhost:3306/money transaction system", "root", "1234");
 		//Lista de objetos que el cliente puede acceder
 		Registry registry = LocateRegistry.createRegistry(1099);
 		registry.rebind("severDePersonas", server);
@@ -25,7 +25,7 @@ public class RunServer {
 		cerrarServer(server);
 	}
 	
-	public static void show_menu(InterfaceServer server) throws NumberFormatException, IOException {
+	public static void show_menu(InterfaceServer server) throws NumberFormatException, IOException, SQLException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         int opcion;
 
@@ -64,7 +64,7 @@ public class RunServer {
        br.close();
     }
 	
-	public static void agregarDato(BufferedReader br, InterfaceServer server) throws IOException {
+	public static void agregarDato(BufferedReader br, InterfaceServer server) throws IOException, SQLException {
 		String name, birthdate, email, password;
 		int idUser;
 
