@@ -3,29 +3,36 @@ package common;
 import java.io.Serializable;
 
 public class User implements Serializable {
-	private String rut;
+	private int idUser;
 	private String name;
 	private String email;
 	private String password;
 	private String currency;
+	private String birthdate;
 	private double total_amount;
 	
 	private static final long serialVersionUID = 1L;
 	
-	public User(String rut, String name, String email, String password, double total_amount) {
-		this.rut = rut;
+	public User(int idUser, String name, String email, String password, String birthdate, String currency, double total_amount) {
+		this.idUser = idUser;
 		this.name = name;
 		this.email = email;
 		this.password = password;
 		this.total_amount = total_amount;
+		this.birthdate = birthdate;
+		this.currency = currency;
 	}
 	
+	public String getBirthdate() {
+		return birthdate;
+	}
+
 	public String getCurrency() {
 		return currency;
 	}
 
-	public String getRut() {
-		return rut;
+	public int getIdUser() {
+		return idUser;
 	}
 
 	public String getName() {
