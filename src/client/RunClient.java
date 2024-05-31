@@ -10,7 +10,13 @@ public class RunClient {
 	public static void main(String args[]) throws NotBoundException, NumberFormatException, SQLException, IOException {
 		Client client = new Client();
 		client.startClient();
-		menu(client);
+		if (client.serverActivo()){
+			menu(client);
+		}
+		else {
+			System.out.println("No hay conexión con servidor; Apagando...");
+		}
+		
 	}
 	
 	public static void menu(Client client) throws NumberFormatException, SQLException, IOException {

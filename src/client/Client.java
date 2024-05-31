@@ -3,6 +3,7 @@ package client;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.rmi.ConnectException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -17,9 +18,15 @@ public class Client {
 	private User user;
 	
 	public void startClient() throws NotBoundException, NumberFormatException, SQLException, IOException{
+		try {
 		Registry registry = LocateRegistry.getRegistry("localhost", 1099);
 		this.server = (InterfaceServer) registry.lookup("severDePersonas");
-		System.out.println("Cliente conectando");
+		System.out.println("Cliente conectando con server principal...");
+		}catch(ConnectException e) {
+			System.out.println("Error de conexion, conectando con servidor de Respaldo...");
+			cambiarAServerRespaldo();
+		}
+		
 	}
 	
 	public User log_in(BufferedReader br) throws SQLException, IOException {
@@ -82,6 +89,20 @@ public class Client {
 		String password = br.readLine();
 		
 		return server.add_user(idUser, name, birthdate, email, password);
+	}
+	
+	public void cambiarAServerRespaldo() throws NotBoundException, NumberFormatException, SQLException, IOException{
+		try {
+		Registry registry = LocateRegistry.getRegistry("localhost", 1199);
+		this.server = (InterfaceServer) registry.lookup("severDePersonas");
+		System.out.println("Cliente conectando con server de respaldo...");
+		}catch(ConnectException e) {
+			System.out.println("ERROR: Cliente de respaldo no disponible");
+		}
+	}
+	
+	public boolean serverActivo() {
+		return(server!=null);
 	}
 	
 }
