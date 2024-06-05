@@ -1,5 +1,7 @@
 package server;
+
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -30,17 +32,18 @@ import common.User;
 public class ServerImpl implements InterfaceServer{
 	
 	private ArrayList<User> database;
+	private String name_server;
 	private String url;
 	private String username;
 	private String password;
 	
-	public ServerImpl(String url, String username, String password) throws RemoteException, FileNotFoundException, SQLException, InterruptedException {		
+	public ServerImpl(String name_server, String url, String username, String password) throws RemoteException, FileNotFoundException, SQLException, InterruptedException {		
 		UnicastRemoteObject.exportObject(this, 0);
 		this.database = new ArrayList<User>();
 		this.url = url;
 		this.username = username;
 		this.password = password;
-
+		this.name_server = name_server;
 		init_data();
 	}
 
@@ -48,7 +51,7 @@ public class ServerImpl implements InterfaceServer{
 		Connection connection = null;
 		Statement query = null;
 		ResultSet results = null;
-		String name, email, password, currency, birthdate;
+		String name, last_name, email, password, currency, birthdate;
 		double total_amount;
 		int idUser;
 
@@ -64,14 +67,15 @@ public class ServerImpl implements InterfaceServer{
 
 		while (results.next()) {
 			idUser = results.getInt("IDUser");
-			name = results.getString("Name") + " " + results.getString("Last Name");
+			name = results.getString("Name");
+			last_name = results.getString("Last_Name");
 			birthdate = results.getString("Birthdate");
-			total_amount = results.getInt("Total Money");
+			total_amount = results.getInt("Total_Amount");
 			email = results.getString("Email");
 			password = results.getString("Password");
 			currency = results.getString("Currency");
 
-			database.add(new User(idUser, name, email, password, birthdate, currency, total_amount));
+			database.add(new User(idUser, name, last_name, email, password, birthdate, currency, total_amount));
 		}
 
 		connection.close(); 
@@ -116,12 +120,13 @@ public class ServerImpl implements InterfaceServer{
 				if (password.equals(aux_password)) {
 					
 					User new_user = new User(result.getInt("IDUser"),
-											result.getString("Name") + " " + result.getString("Last Name"),
-											result.getString("Email"),
-											result.getString("Password"),
-											result.getString("Birthdate"),
-											result.getString("Currency"),
-											result.getDouble("Total Money"));
+							result.getString("Name"),
+							result.getString("Last_Name"),
+							result.getString("Email"),
+							result.getString("Password"),
+							result.getString("Birthdate"),
+							result.getString("Currency"),
+							result.getDouble("Total_Amount"));
 					connection.close();
 					return new_user;
 				}
@@ -132,7 +137,7 @@ public class ServerImpl implements InterfaceServer{
 	}
 
 	@Override
-	public Boolean make_transaction(int origin_id, int dest_id, double total, String currency_type) throws RemoteException, SQLException {
+	public Boolean make_transaction(int id_source, int id_destination, String email, double total) throws SQLException, IOException {
 				boolean flag = false;
 		
 				Connection connection = connect_data_base(this.url, this.username, this.password);
@@ -142,44 +147,68 @@ public class ServerImpl implements InterfaceServer{
 				String sql = "SELECT * FROM user WHERE IDUser = ?";
 				
 				query = connection.prepareStatement(sql);
-				query.setInt(1, origin_id);
+				query.setInt(1, id_source);
 				result = query.executeQuery();
+				result.next();
 				
 				// Guardar el usuario auxiliar
-				User aux_user = new User(result.getInt("IDUser"),
+				User aux_user_1 = new User(result.getInt("IDUser"),
 										result.getString("Name"),
-										result.getString("Birthdate"),
+										result.getString("Last_Name"),
 										result.getString("Email"),
 										result.getString("Password"),
+										result.getString("Birthdate"),
 										result.getString("Currency"),
-										result.getDouble("Total Money"));
+										result.getDouble("Total_Amount"));
 				
 				// Obtengo el usuario de origin para ver si existe
-				if (origin_id == result.getInt("IDUser")) {
+				if (id_source == result.getInt("IDUser")) {
+					
 					sql = "SELECT * FROM user WHERE IDUser = ?";
 					query = connection.prepareStatement(sql);
-					query.setInt(1, dest_id);
+					query.setInt(1, id_destination);
 					result = query.executeQuery();
+					result.next();
+					User aux_user_2 = new User(result.getInt("IDUser"),
+												result.getString("Name"),
+												result.getString("Last_Name"),
+												result.getString("Email"),
+												result.getString("Password"),
+												result.getString("Birthdate"),
+												result.getString("Currency"),
+												result.getDouble("Total_Amount"));
 					
 					// Obtengo el usuario destino para ver si existe
-					if (dest_id == result.getInt("IDUser")) {
-						if (aux_user.getTotal_amount() >= result.getDouble("Total Money")) {
+					if (id_destination == result.getInt("IDUser")) {
+						if (aux_user_1.getTotal_amount() >= result.getDouble("Total_Amount")) {
 							
 							// Hacer la transacción hacia el destinatario
-							double transaction = this.convertirPesoAMoneda(aux_user.getTotal_amount(), result.getString("Currency"));
-							sql = "UPDATE user SET Total Money = ? WHERE IDUser = ?";
+							double transaction = APICurrency.conversor(aux_user_1.getCurrency(), aux_user_2.getCurrency(), total);
+							sql = "UPDATE user SET Total_Amount = ? WHERE IDUser = ?";
 							query = connection.prepareStatement(sql);
-							query.setDouble(1, result.getDouble("Total Money") + transaction);
+							
+							query.setDouble(1, (aux_user_2.getTotal_amount() + transaction));
 							query.setInt(2, result.getInt("IDUser"));
+							
 							query.executeUpdate();
 							
 							// Hacer la transacción hacia el origen
-							sql = "UPDATE user SET Total Money = ? WHERE IDUser = ?";
+							sql = "UPDATE user SET Total_Amount = ? WHERE IDUser = ?";
 							query = connection.prepareStatement(sql);
-							query.setDouble(1, result.getDouble("Total Money") - total);
-							query.setInt(2, aux_user.getIdUser());
+							double update_total = result.getDouble("Total_Amount") - total;
+							query.setDouble(1, update_total);
+							query.setInt(2, aux_user_1.getIdUser());
 							query.executeUpdate();
 							flag = true;
+							
+							sql = "INSERT INTO transaction (`IDSourceUser`, `IDDestionationUser`, `TotalAmount`, `Currency`) VALUES (?, ?, ?, ?)";
+							query = connection.prepareStatement(sql);
+							query.setInt(1, aux_user_1.getIdUser());
+							query.setInt(2, aux_user_2.getIdUser());
+							query.setDouble(3, total);
+							query.setString(4, aux_user_1.getCurrency());
+							query.executeUpdate();
+							System.out.println("Se realizo la transacción...");
 						}
 					}
 				}
@@ -199,14 +228,14 @@ public class ServerImpl implements InterfaceServer{
 		String sql = "SELECT * FROM transaction WHERE IDSourceUser = ?";
 		
 		query = connection.prepareStatement(sql);
-		
+		query.setInt(1, id);
 		results = query.executeQuery();
-		results.first();		
-		while(true) {
+		//results.first();		
+		while(results.next()) {
 			
 			int idTrans = results.getInt("IDTransaction");
 			int idSource = results.getInt("IDSourceUser");
-			int idDestination = results.getInt("IDDestinationUser");
+			int idDestination = results.getInt("IDDestionationUser");
 			double total = results.getDouble("TotalAmount");
 			String currency = results.getString("Currency");
 			
@@ -218,37 +247,13 @@ public class ServerImpl implements InterfaceServer{
 			System.out.println("Currency: " + currency);
 			System.out.println("*****************************\n");
 			
-			if(results.next() == false) break;
+			
 		}
 		
 		connection.close();
 	}
 
-	@Override
-	public Boolean add_user(int idUser, String name, String birthdate, String email, String password) throws RemoteException, SQLException {
-		User new_user = new User(idUser, name,  email, password, birthdate, "USD", 0);
-		
-		Connection connection = connect_data_base(this.url, this.username, this.password);
-		PreparedStatement query;
-		
-		String sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-		String[] user_name = new_user.getName().split(" ");
-		query = connection.prepareStatement(sql);
-		query.setInt(1, new_user.getIdUser());
-		query.setString(2, user_name[0]);
-		query.setString(3, user_name[1]);
-		query.setString(4, new_user.getBirthdate());
-		query.setDouble(5, new_user.getTotal_amount());
-		query.setString(6, new_user.getEmail());
-		query.setString(7, new_user.getPassword());
-		query.setString(8, new_user.getCurrency());
-		
-		query.executeUpdate();
-		
-		connection.close();
-		
-		return database.add(new_user);
-	}
+	
 
 	@Override
 	public Boolean update_data_base() throws RemoteException, SQLException, ParseException {
@@ -259,10 +264,10 @@ public class ServerImpl implements InterfaceServer{
 		User temp;
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		
-		sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) " +
+		sql = "INSERT INTO user (`IDUser`, `Name`, `Last_Name`, `Birthdate`, `Total_Amount`, `Email`, `Password`, `Currency`) " +
 				"VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
 				"ON DUPLICATE KEY UPDATE " +
-				"`Name` = VALUES(`Name`), `Last Name` = VALUES(`Last Name`), `Total Money` = VALUES(`Total Money`), " + 
+				"`Name` = VALUES(`Name`), `Last_Name` = VALUES(`Last_Name`), `Total_Amount` = VALUES(`Total_Amount`), " + 
 				"`Email` = VALUES(`Email`), `Password` = VALUES(`Password`), `Currency` = VALUES(`Currency`);";
 
 		for(int i = 0; i < database.size(); i++) {
@@ -286,6 +291,35 @@ public class ServerImpl implements InterfaceServer{
 		connection.close();
 		return true;
 	}
+	
+	
+	@Override
+	public boolean add_user(int idUser, String name, String last_name, String email, String password, String birthdate, String currency, double total_amount) throws RemoteException, SQLException{
+		
+		User new_user = new User(idUser, name, last_name, email, password, birthdate, currency, total_amount);
+		
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		
+		String sql = "INSERT INTO user (`IDUser`, `Name`, `Last_Name`, `Birthdate`, `Total_Amount`, `Email`, `Password`, `Currency`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+		query = connection.prepareStatement(sql);
+		query.setInt(1, new_user.getIdUser());
+		query.setString(2, new_user.getName());
+		query.setString(3, new_user.getLast_name());
+		query.setString(4, new_user.getBirthdate());
+		query.setDouble(5, new_user.getTotal_amount());
+		query.setString(6, new_user.getEmail());
+		query.setString(7, new_user.getPassword());
+		query.setString(8, new_user.getCurrency());
+		
+		query.executeUpdate();
+		
+		connection.close();
+		
+		return database.add(new_user);
+	}
+	
 	
 	@Override
 	public String getDataFromApi() {
@@ -355,6 +389,34 @@ public class ServerImpl implements InterfaceServer{
 		double result = peso/valorMoneda;
 		return result;
 		
+	}
+
+	@Override
+	public boolean delete_user(int id, String email, String password) throws SQLException {
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		//ResultSet result;
+		
+		String sql = "DELETE FROM transaction WHERE IDSourceUser = ?";
+		
+		query = connection.prepareStatement(sql);
+		
+		query.setInt(1, id);
+		
+		query.executeUpdate();
+		
+		
+		sql = "DELETE FROM user WHERE Email = ? AND Password = ?";
+		
+		query = connection.prepareStatement(sql);
+		
+		query.setString(1, email);
+		query.setString(2, password);
+		
+		query.executeUpdate();
+		
+		connection.close(); 
+		return true;
 	}
 	
 }

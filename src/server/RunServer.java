@@ -15,12 +15,20 @@ import common.InterfaceServer;
 import common.User;
 
 public class RunServer {
+	private static String name_server = "North Corea";
+	private static int port = 1099;
+	private static String url = "jdbc:mysql://localhost:3307/money transaction system";
+	private static String username = "root";
+	private static String password = "";
+	
 	public static void main(String args[]) throws NotBoundException, NumberFormatException, IOException, SQLException, InterruptedException, ClassNotFoundException, ParseException {
-		InterfaceServer server = new ServerImpl("jdbc:mysql://localhost:3306/money transaction system", "root", "1234");
+		
+
+		InterfaceServer server = new ServerImpl(name_server,url, username, password);
 		//Lista de objetos que el cliente puede acceder
-		Registry registry = LocateRegistry.createRegistry(1099);
+		Registry registry = LocateRegistry.createRegistry(port);
 		registry.rebind("severDePersonas", server);
-		System.out.println("Servidor Arriba");
+		System.out.println(name_server + " server up...");
 		show_menu(server);
 		cerrarServer(server);
 	}
@@ -65,21 +73,35 @@ public class RunServer {
     }
 	
 	public static void agregarDato(BufferedReader br, InterfaceServer server) throws IOException, SQLException {
-		String name, birthdate, email, password;
+		String name, last_name, birthdate, email, password, currency;
+		double total_amount;
 		int idUser;
-
-		System.out.println("Ingrese su nombre: ");
-		name = br.readLine();
+		
 		System.out.println("Ingrese su rut:");
 		idUser = Integer.parseInt(br.readLine());
-		System.out.println("Ingrese su fecha de cumpleaños (aaaa-mm-dd)");
-		birthdate = br.readLine();
+		
+		System.out.println("Ingrese su nombre: ");
+		name = br.readLine();
+		
+		System.out.println("Ingrese su apellido: ");
+		last_name = br.readLine();
+		
 		System.out.println("Ingrese su email: ");
 		email = br.readLine();
+		
 		System.out.println("Ingrese su contraseña: ");
 		password = br.readLine();
+		
+		System.out.println("Ingrese su fecha de cumpleaños (aaaa-mm-dd)");
+		birthdate = br.readLine();
+		
+		System.out.println("Ingrese su tipo de moneda: ");
+		currency = br.readLine();
+		
+		System.out.println("Ingrese su dinero total: ");
+		total_amount = Double.parseDouble(br.readLine());
         
-        server.add_user(idUser, name, birthdate, email, password);
+		server.add_user(idUser, name, last_name, email, password, birthdate, currency, total_amount);
 	}
 	
 	public static void mostrarDatos(InterfaceServer server) throws RemoteException {
@@ -95,7 +117,7 @@ public class RunServer {
 	}
 	
 	private static void cerrarServer(InterfaceServer server) throws RemoteException, NotBoundException, SQLException, ParseException {
-		Registry registry = LocateRegistry.getRegistry(1099);
+		Registry registry = LocateRegistry.getRegistry(port);
 		registry.unbind("severDePersonas");
 		UnicastRemoteObject.unexportObject(server, true);
 		System.out.println("Cerrando servidor...");

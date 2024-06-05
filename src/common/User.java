@@ -5,6 +5,7 @@ import java.io.Serializable;
 public class User implements Serializable {
 	private int idUser;
 	private String name;
+	private String last_name;
 	private String email;
 	private String password;
 	private String currency;
@@ -13,9 +14,10 @@ public class User implements Serializable {
 	
 	private static final long serialVersionUID = 1L;
 	
-	public User(int idUser, String name, String email, String password, String birthdate, String currency, double total_amount) {
+	public User(int idUser, String name, String last_name, String email, String password, String birthdate, String currency, double total_amount) {
 		this.idUser = idUser;
 		this.name = name;
+		this.last_name = last_name;
 		this.email = email;
 		this.password = password;
 		this.total_amount = total_amount;
@@ -23,6 +25,26 @@ public class User implements Serializable {
 		this.currency = currency;
 	}
 	
+	public String getLast_name() {
+		return last_name;
+	}
+
+	public void setLast_name(String last_name) {
+		this.last_name = last_name;
+	}
+
+	public void setIdUser(int idUser) {
+		this.idUser = idUser;
+	}
+
+	public void setBirthdate(String birthdate) {
+		this.birthdate = birthdate;
+	}
+
+	public void setTotal_amount(double total_amount) {
+		this.total_amount = total_amount;
+	}
+
 	public String getBirthdate() {
 		return birthdate;
 	}
