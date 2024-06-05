@@ -18,7 +18,7 @@ public class RunClient {
 		
 	}
 	
-	public static void menu(Client client) throws NumberFormatException, SQLException, IOException {
+	public static void menu(Client client) throws NumberFormatException, SQLException, IOException, NotBoundException {
         int opcion;
 
         do {
@@ -127,7 +127,7 @@ public class RunClient {
 		return false;
 	}
 	
-	public static void menu_inicio_sesion(Client client) throws NumberFormatException, IOException, SQLException {
+	public static void menu_inicio_sesion(Client client) throws NumberFormatException, IOException, SQLException, NotBoundException {
         int opcion;
 		do {
             System.out.println("*********** Menú Cliente: ********");
@@ -140,13 +140,34 @@ public class RunClient {
 
             switch (opcion) {
                 case 1:
-                	client.show_transaction();
-                    break;
+					try {
+                		client.show_transaction();
+					} 
+					catch(Exception e) {
+						System.out.println("Servidor caido, cambiando al más cercano");
+						client.cambiarAServerRespaldo();
+					}
+					
+					break;
                 case 2:
-                	realizar_transaccion(client);
+					try {
+                		realizar_transaccion(client);
+					}
+					catch(Exception e) {
+						System.out.println("Servidor caido, cambiando al más cercano");
+						client.cambiarAServerRespaldo();
+					}
+
                     break;
                 case 3:
-                	client.checkAccountStatus();
+					try {
+                		client.checkAccountStatus();
+					}
+					catch(Exception e) {
+						System.out.println("Servidor caido, cambiando al más cercano");
+						client.cambiarAServerRespaldo();
+					}
+					
                     break;
                 case 4:
                     System.out.println("Saliendo del programa...");

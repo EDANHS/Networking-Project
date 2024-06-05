@@ -14,7 +14,8 @@ public class APICurrency {
     public static Double conversor(String moneda1, String moneda2, Double cantidad) throws IOException {
     	
     	//iniciasion del URL de la api
-    	URL url = new URL(direccion + "convert?from="+ moneda1 + "&to=" + moneda2 + "&amount="+ cantidad);
+    	@SuppressWarnings("deprecation")
+        URL url = new URL(direccion + "convert?from="+ moneda1 + "&to=" + moneda2 + "&amount="+ cantidad);
     	
     	//conexion http
     	HttpURLConnection httpConn = (HttpURLConnection) url.openConnection();
@@ -32,12 +33,14 @@ public class APICurrency {
         
         //Error si la moneda no coicide
         if (response.equals(error)){
+            s.close();
         	return -1.0;
         }
         
         //conversion a double
         Double ret = Double.parseDouble(response.split(",")[0].split(":")[1]);
-        
+
+        s.close();
     	
     	return ret;
     }

@@ -17,7 +17,7 @@ import common.User;
 public class RunServerRespaldo {
 	private static String name_server = "Russia";
 	private static int port = 1199;
-	private static String url = "jdbc:mysql://localhost:3307/money transaction system";
+	private static String url = "jdbc:mysql://localhost:3306/money transaction system";
 	private static String username = "root";
 	private static String password = "";
 	

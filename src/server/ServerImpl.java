@@ -36,6 +36,7 @@ public class ServerImpl implements InterfaceServer{
 	private String url;
 	private String username;
 	private String password;
+	private boolean inUse;
 	
 	public ServerImpl(String name_server, String url, String username, String password) throws RemoteException, FileNotFoundException, SQLException, InterruptedException {		
 		UnicastRemoteObject.exportObject(this, 0);
@@ -68,9 +69,9 @@ public class ServerImpl implements InterfaceServer{
 		while (results.next()) {
 			idUser = results.getInt("IDUser");
 			name = results.getString("Name");
-			last_name = results.getString("Last_Name");
+			last_name = results.getString("Last Name");
 			birthdate = results.getString("Birthdate");
-			total_amount = results.getInt("Total_Amount");
+			total_amount = results.getInt("Total Money");
 			email = results.getString("Email");
 			password = results.getString("Password");
 			currency = results.getString("Currency");
@@ -79,6 +80,10 @@ public class ServerImpl implements InterfaceServer{
 		}
 
 		connection.close(); 
+	}
+	
+	public String get_name() {
+		return this.name_server;
 	}
 	
 	private Connection connect_data_base(String url, String username, String password) {
@@ -121,12 +126,12 @@ public class ServerImpl implements InterfaceServer{
 					
 					User new_user = new User(result.getInt("IDUser"),
 							result.getString("Name"),
-							result.getString("Last_Name"),
+							result.getString("Last Name"),
 							result.getString("Email"),
 							result.getString("Password"),
 							result.getString("Birthdate"),
 							result.getString("Currency"),
-							result.getDouble("Total_Amount"));
+							result.getDouble("Total Money"));
 					connection.close();
 					return new_user;
 				}
@@ -138,85 +143,111 @@ public class ServerImpl implements InterfaceServer{
 
 	@Override
 	public Boolean make_transaction(int id_source, int id_destination, String email, double total) throws SQLException, IOException {
-				boolean flag = false;
+		while (true) {
+			if(requestMutex()) {
+				System.out.println("Ingresando a sección crítica");
+				break;
+			}
+
+			try {
+				Thread.sleep(2000);
+			} catch(InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			System.out.println("Aún no se permite el ingreso a la sección crítica");
+		}
+
+		boolean flag = false;
+
+		Connection connection = connect_data_base(this.url, this.username, this.password);
+		PreparedStatement query;
+		ResultSet result;
+		int timeSleep = 8000;
 		
-				Connection connection = connect_data_base(this.url, this.username, this.password);
-				PreparedStatement query;
-				ResultSet result;
-				
-				String sql = "SELECT * FROM user WHERE IDUser = ?";
-				
-				query = connection.prepareStatement(sql);
-				query.setInt(1, id_source);
-				result = query.executeQuery();
-				result.next();
-				
-				// Guardar el usuario auxiliar
-				User aux_user_1 = new User(result.getInt("IDUser"),
+		String sql = "SELECT * FROM user WHERE IDUser = ?";
+		
+		query = connection.prepareStatement(sql);
+		query.setInt(1, id_source);
+		result = query.executeQuery();
+		result.next();
+		
+		// Guardar el usuario auxiliar
+		User aux_user_1 = new User(result.getInt("IDUser"),
+								result.getString("Name"),
+								result.getString("Last Name"),
+								result.getString("Email"),
+								result.getString("Password"),
+								result.getString("Birthdate"),
+								result.getString("Currency"),
+								result.getDouble("Total Money"));
+		
+		// Obtengo el usuario de origin para ver si existe
+		if (id_source == result.getInt("IDUser")) {
+			
+			sql = "SELECT * FROM user WHERE IDUser = ?";
+			query = connection.prepareStatement(sql);
+			query.setInt(1, id_destination);
+			result = query.executeQuery();
+			result.next();
+			User aux_user_2 = new User(result.getInt("IDUser"),
 										result.getString("Name"),
-										result.getString("Last_Name"),
+										result.getString("Last Name"),
 										result.getString("Email"),
 										result.getString("Password"),
 										result.getString("Birthdate"),
 										result.getString("Currency"),
-										result.getDouble("Total_Amount"));
-				
-				// Obtengo el usuario de origin para ver si existe
-				if (id_source == result.getInt("IDUser")) {
+										result.getDouble("Total Money"));
+			
+			// Obtengo el usuario destino para ver si existe
+			if (id_destination == result.getInt("IDUser")) {
+				if (aux_user_1.getTotal_amount() >= result.getDouble("Total Money")) {
 					
-					sql = "SELECT * FROM user WHERE IDUser = ?";
+					// Hacer la transacción hacia el destinatario
+					double transaction = APICurrency.conversor(aux_user_1.getCurrency(), aux_user_2.getCurrency(), total);
+					sql = "UPDATE user SET `Total Money` = ? WHERE IDUser = ?";
 					query = connection.prepareStatement(sql);
-					query.setInt(1, id_destination);
-					result = query.executeQuery();
-					result.next();
-					User aux_user_2 = new User(result.getInt("IDUser"),
-												result.getString("Name"),
-												result.getString("Last_Name"),
-												result.getString("Email"),
-												result.getString("Password"),
-												result.getString("Birthdate"),
-												result.getString("Currency"),
-												result.getDouble("Total_Amount"));
 					
-					// Obtengo el usuario destino para ver si existe
-					if (id_destination == result.getInt("IDUser")) {
-						if (aux_user_1.getTotal_amount() >= result.getDouble("Total_Amount")) {
-							
-							// Hacer la transacción hacia el destinatario
-							double transaction = APICurrency.conversor(aux_user_1.getCurrency(), aux_user_2.getCurrency(), total);
-							sql = "UPDATE user SET Total_Amount = ? WHERE IDUser = ?";
-							query = connection.prepareStatement(sql);
-							
-							query.setDouble(1, (aux_user_2.getTotal_amount() + transaction));
-							query.setInt(2, result.getInt("IDUser"));
-							
-							query.executeUpdate();
-							
-							// Hacer la transacción hacia el origen
-							sql = "UPDATE user SET Total_Amount = ? WHERE IDUser = ?";
-							query = connection.prepareStatement(sql);
-							double update_total = result.getDouble("Total_Amount") - total;
-							query.setDouble(1, update_total);
-							query.setInt(2, aux_user_1.getIdUser());
-							query.executeUpdate();
-							flag = true;
-							
-							sql = "INSERT INTO transaction (`IDSourceUser`, `IDDestionationUser`, `TotalAmount`, `Currency`) VALUES (?, ?, ?, ?)";
-							query = connection.prepareStatement(sql);
-							query.setInt(1, aux_user_1.getIdUser());
-							query.setInt(2, aux_user_2.getIdUser());
-							query.setDouble(3, total);
-							query.setString(4, aux_user_1.getCurrency());
-							query.executeUpdate();
-							System.out.println("Se realizo la transacción...");
-						}
-					}
+					query.setDouble(1, (aux_user_2.getTotal_amount() + transaction));
+					query.setInt(2, result.getInt("IDUser"));
+					
+					query.executeUpdate();
+					
+					// Hacer la transacción hacia el origen
+					sql = "UPDATE user SET `Total Money` = ? WHERE IDUser = ?";
+					query = connection.prepareStatement(sql);
+					double update_total = result.getDouble("Total Money") - total;
+					query.setDouble(1, update_total);
+					query.setInt(2, aux_user_1.getIdUser());
+					query.executeUpdate();
+					flag = true;
+					
+					sql = "INSERT INTO transaction (`IDSourceUser`, `IDDestionationUser`, `TotalAmount`, `Currency`) VALUES (?, ?, ?, ?)";
+					query = connection.prepareStatement(sql);
+					query.setInt(1, aux_user_1.getIdUser());
+					query.setInt(2, aux_user_2.getIdUser());
+					query.setDouble(3, total);
+					query.setString(4, aux_user_1.getCurrency());
+					query.executeUpdate();
+					System.out.println("Se realizo la transacción...");
 				}
-				
-				connection.close();
-				
-				if(flag) return true;
-				return false;
+			}
+		}
+
+		System.out.println("Iniciando Transacción. Tiempo estimado: " + timeSleep);
+		try {
+			Thread.sleep(timeSleep);
+		} catch(InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println("Transacción Exitosa!");
+
+		releaseMutex();
+		connection.close();
+		
+		if(flag) return true;
+		return false;
 	}
 
 	@Override
@@ -257,17 +288,33 @@ public class ServerImpl implements InterfaceServer{
 
 	@Override
 	public Boolean update_data_base() throws RemoteException, SQLException, ParseException {
+		while (true) {
+			if(requestMutex()) {
+				System.out.println("Ingresando a sección crítica");
+				break;
+			}
+
+			try {
+				Thread.sleep(2000);
+			} catch(InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			System.out.println("Aún no se permite el ingreso a la sección crítica");
+		}
+
 		Connection connection = connect_data_base(this.url, this.username, this.password);
 		PreparedStatement query;
 		String sql;
 		String[] user_name;
 		User temp;
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+		int timeSleep = 8000;
 		
-		sql = "INSERT INTO user (`IDUser`, `Name`, `Last_Name`, `Birthdate`, `Total_Amount`, `Email`, `Password`, `Currency`) " +
+		sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) " +
 				"VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
 				"ON DUPLICATE KEY UPDATE " +
-				"`Name` = VALUES(`Name`), `Last_Name` = VALUES(`Last_Name`), `Total_Amount` = VALUES(`Total_Amount`), " + 
+				"`Name` = VALUES(`Name`), `Last Name` = VALUES(`Last Name`), `Total Money` = VALUES(`Total Money`), " + 
 				"`Email` = VALUES(`Email`), `Password` = VALUES(`Password`), `Currency` = VALUES(`Currency`);";
 
 		for(int i = 0; i < database.size(); i++) {
@@ -288,6 +335,17 @@ public class ServerImpl implements InterfaceServer{
 			query.executeUpdate();
 		}
 
+		System.out.println("Cerrando Sesión. Tiempo estimado: " + timeSleep);
+		try {
+			Thread.sleep(timeSleep);
+		} catch(InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		System.out.println("Sesión finalizada!");
+
+		releaseMutex();
+
 		connection.close();
 		return true;
 	}
@@ -295,13 +353,27 @@ public class ServerImpl implements InterfaceServer{
 	
 	@Override
 	public boolean add_user(int idUser, String name, String last_name, String email, String password, String birthdate, String currency, double total_amount) throws RemoteException, SQLException{
+		while (true) {
+			if(requestMutex()) {
+				System.out.println("Ingresando a sección crítica");
+				break;
+			}
+
+			try {
+				Thread.sleep(2000);
+			} catch(InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			System.out.println("Aún no se permite el ingreso a la sección crítica");
+		}
 		
 		User new_user = new User(idUser, name, last_name, email, password, birthdate, currency, total_amount);
-		
 		Connection connection = connect_data_base(this.url, this.username, this.password);
 		PreparedStatement query;
+		int timeSleep = 8000;
 		
-		String sql = "INSERT INTO user (`IDUser`, `Name`, `Last_Name`, `Birthdate`, `Total_Amount`, `Email`, `Password`, `Currency`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		String sql = "INSERT INTO user (`IDUser`, `Name`, `Last Name`, `Birthdate`, `Total Money`, `Email`, `Password`, `Currency`) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
 		query = connection.prepareStatement(sql);
 		query.setInt(1, new_user.getIdUser());
@@ -314,7 +386,17 @@ public class ServerImpl implements InterfaceServer{
 		query.setString(8, new_user.getCurrency());
 		
 		query.executeUpdate();
+
+		System.out.println("Iniciando inserción. Tiempo estimado: " + timeSleep);
+		try {
+			Thread.sleep(timeSleep);
+		} catch(InterruptedException e) {
+			e.printStackTrace();
+		}
 		
+		System.out.println("Inserción Exitosa!");
+		releaseMutex();
+
 		connection.close();
 		
 		return database.add(new_user);
@@ -327,7 +409,8 @@ public class ServerImpl implements InterfaceServer{
 		 
 		try {
             // URL de la API REST
-            URL apiUrl = new URL("https://mindicador.cl/api");
+            @SuppressWarnings("deprecation")
+			URL apiUrl = new URL("https://mindicador.cl/api");
 
             // Abre la conexión HTTP
             HttpURLConnection connection = (HttpURLConnection) apiUrl.openConnection();
@@ -417,6 +500,23 @@ public class ServerImpl implements InterfaceServer{
 		
 		connection.close(); 
 		return true;
+	}
+
+	@Override
+	public synchronized boolean requestMutex() throws RemoteException {
+		if(this.inUse) {
+			return false;
+		}
+		else {
+			this.inUse = true;
+		}
+
+		return true;
+	}
+
+	@Override
+	public synchronized void releaseMutex() throws RemoteException {
+		inUse = false;
 	}
 	
 }

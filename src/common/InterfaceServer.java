@@ -16,5 +16,7 @@ public interface InterfaceServer extends Remote {
 	public double getValorMonedaEnPeso(String moneda) throws RemoteException;
 	public Boolean update_data_base() throws RemoteException, SQLException, ParseException;
 	public boolean delete_user(int id, String email, String password) throws RemoteException, SQLException;
-	Boolean make_transaction(int id_source, int id_destination, String email, double total) throws RemoteException, SQLException, IOException;
+	public boolean requestMutex() throws RemoteException;
+	public void releaseMutex() throws RemoteException;
+	public Boolean make_transaction(int id_source, int id_destination, String email, double total) throws RemoteException, SQLException, IOException;
 }

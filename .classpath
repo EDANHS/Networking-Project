@@ -5,22 +5,22 @@
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking-Project/lib/jackson-annotations-2.14.0.jar">
+	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking_Project/lib/jackson-annotations-2.14.0.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking-Project/lib/jackson-core-2.14.0.jar">
+	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking_Project/lib/jackson-core-2.14.0.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking-Project/lib/jackson-databind-2.14.0.jar">
+	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking_Project/lib/jackson-databind-2.14.0.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking-Project/lib/mysql-connector-j-8.3.0.jar">
+	<classpathentry kind="lib" path="C:/Users/matia/Desktop/Workspace/Networking_Project/lib/mysql-connector-j-8.3.0.jar">
 		<attributes>
 			<attribute name="module" value="true"/>
 		</attributes>
