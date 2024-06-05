@@ -17,7 +17,7 @@ import common.User;
 public class RunServer {
 	private static String name_server = "North Corea";
 	private static int port = 1099;
-	private static String url = "jdbc:mysql://localhost:3307/money transaction system";
+	private static String url = "jdbc:mysql://localhost:3306/money transaction system";
 	private static String username = "root";
 	private static String password = "";
 	
